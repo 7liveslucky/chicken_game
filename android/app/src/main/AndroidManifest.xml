@@ -2,7 +2,7 @@
     package="com.example.dart_git_fetchbylanguage">
    <application
         android:label="dart_git_fetchbylanguage"
-        android:icon="@mipmap/launcher_icon">
+        android:icon="@mipmap/ic_launcher">
         <activity
             android:name=".MainActivity"
             android:launchMode="singleTop"
