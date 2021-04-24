@@ -6,7 +6,9 @@ class Score {
   final ChickenGame chickenGame;
   TextPainter painter;
   Offset pos;
-  int eggsCached;
+  int eggsCatched;
+  int eggsMissed;
+  int playerHealth;
 
   // int eggsMissed;
 
@@ -21,14 +23,31 @@ class Score {
   }
 
   void update(double t) {
-    if ((painter.text ?? '') != chickenGame.eggsCatched.toString()) {
-      painter.text = TextSpan(
-        text: chickenGame.eggsCatched.toString()+String.fromCharCode(Icons.score.codePoint),
-        style: TextStyle(color: Colors.red, fontSize: 100.0),
-      );
+    if (chickenGame.eggsCatched != eggsCatched ||
+        eggsMissed != chickenGame.eggsMissed||
+    playerHealth!=chickenGame.player.health
+    ) {
+      eggsCatched = chickenGame.eggsCatched;
+      eggsMissed = chickenGame.eggsMissed;
+      playerHealth=chickenGame.player.health;
+      painter.text = TextSpan(children: [
+        TextSpan(
+          text: eggsCatched.toString() + " eggs\n",
+          style: TextStyle(
+              color: Colors.red, fontSize: chickenGame.widthFactor / 4),
+        ),
+        TextSpan(
+          text: eggsMissed.toString() + " lives\n",
+          style: TextStyle(
+              color: Colors.red, fontSize: chickenGame.widthFactor / 4),
+        ),
+        TextSpan(
+          text: playerHealth.toString() + " health points\n",
+          style: TextStyle(
+              color: Colors.red, fontSize: chickenGame.widthFactor / 4),
+        ),
+      ]);
       painter.layout();
-      pos = Offset(chickenGame.size.width / 2 - painter.width / 2,
-          chickenGame.size.height * 0.2 - painter.height / 2);
     }
   }
 }

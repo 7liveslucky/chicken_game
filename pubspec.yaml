@@ -24,6 +24,7 @@ dependencies:
   flutter:
     sdk: flutter
   flame: ^0.29.4
+  audioplayers: ^0.18.3
 
 
   # The following adds the Cupertino Icons font to your application.
@@ -46,9 +47,26 @@ flutter:
   uses-material-design: true
 
   # To add assets to your application, add an assets section, like this:
-  # assets:
-  #   - images/a_dot_burr.jpeg
-  #   - images/a_dot_ham.jpeg
+  assets:
+     - assets/images/egg.png
+     - assets/images/egg_broken.png
+     - assets/images/egg-broken_yolk.png
+     - assets/images/chicken_r.png
+     - assets/images/chicken_l.png
+     - assets/images/ground.png
+     - assets/images/background.png
+     - assets/images/Stone.png
+     - assets/images/Stone2.png
+     - assets/images/Stone3.png
+     - assets/images/corn.png
+     - assets/images/fire.gif
+     - assets/images/fire_start.png
+     - assets/images/game-over.png
+     - assets/images/pause.png
+     - assets/audio/crunch.mp3
+     - assets/audio/lay.mp3
+     - assets/audio/loop.mp3
+     - assets/audio/shoot.mp3
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/assets-and-images/#resolution-aware.
