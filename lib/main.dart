@@ -8,27 +8,28 @@ import 'package:dart_git_fetchbylanguage/score.dart';
 import 'package:flame/flame.dart';
 import 'package:flame/game.dart';
 import 'package:flame/gestures.dart';
+import 'package:flame/keyboard.dart';
 import 'package:flame/sprite.dart';
 import 'package:flame/util.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+
 import 'eggGenerator.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  var game = new ChickenGame();
+  await Flame.util.setLandscapeLeftOnly();
+  await Flame.util.fullScreen();
+  Size size = await Flame.util.initialDimensions();
+  var game = new ChickenGame(size);
   game.init();
+  runApp(game.widget);
   PanGestureRecognizer panreg = PanGestureRecognizer();
   panreg.onUpdate = game.onPanUpdate;
   DoubleTapGestureRecognizer dtreg = DoubleTapGestureRecognizer();
   dtreg.onDoubleTap = game.onDoubleTap;
-  SystemChrome.setPreferredOrientations(
-          [DeviceOrientation.landscapeRight, DeviceOrientation.landscapeLeft])
-      .then((_) {
-    runApp(game.widget);
-  });
 }
 
 // Future<void> loadSounds() async {
@@ -42,7 +43,8 @@ void main() async {
 //   ]);
 // }
 
-class ChickenGame extends Game with PanDetector, DoubleTapDetector {
+class ChickenGame extends Game
+    with PanDetector, DoubleTapDetector, KeyboardEvents {
   Size size;
   double widthFactor;
   double heightFactor;
@@ -68,18 +70,16 @@ class ChickenGame extends Game with PanDetector, DoubleTapDetector {
   bool lost;
 
   Future<void> init() async {
-    size = await Flame.util.initialDimensions();
     rand = Random();
-    widthFactor = size.width / 10;
-    heightFactor = size.height / 10;
+    widthFactor = longEdge() / 10;
+    heightFactor = shortEdge() / 10;
     player = Player(this);
     eggs = [];
     bullets = [];
     eggsGenerator = EggsGenerator(this);
     eggsMissed = 0;
     eggsCatched = 0;
-    score = Score(this);
-    await flameUtil.fullScreen();
+    score = Score(this, 10);
     pause = false;
     lost = false;
   }
@@ -90,7 +90,7 @@ class ChickenGame extends Game with PanDetector, DoubleTapDetector {
       return;
     }
 
-    bg = Rect.fromLTWH(0, 0, size.width, size.height - heightFactor * 0.8);
+    bg = Rect.fromLTWH(0, 0, longEdge(), shortEdge() - heightFactor * 0.8);
 
     if (1 == 1) {
       //!player.lost
@@ -102,7 +102,7 @@ class ChickenGame extends Game with PanDetector, DoubleTapDetector {
     }
 
     ground =
-        Rect.fromLTWH(0, size.height - heightFactor, size.width, heightFactor);
+        Rect.fromLTWH(0, shortEdge() - heightFactor, longEdge(), heightFactor);
     canvas.drawRect(ground, Paint()..color = Color(0x00000000));
     bgSprite.renderRect(canvas, bg.inflate(0));
     groundSprite.renderRect(canvas, ground.inflate(0));
@@ -110,36 +110,33 @@ class ChickenGame extends Game with PanDetector, DoubleTapDetector {
     eggs.forEach((egg) => egg.render(canvas));
     score.render(canvas);
     bullets.forEach((bullet) => bullet.render(canvas));
-
+    if (player.health <= 0 || eggsMissed >= score.maxLives) {
+      Rect gameoverRect = Rect.fromLTWH(0, 0, longEdge(), shortEdge());
+      canvas.drawRect(gameoverRect, Paint()..color = Colors.black);
+      gameOver.renderRect(canvas, bg.inflate(0));
+      lost = true;
+    }
     if (pause) {
       canvas.drawRect(Rect.largest, Paint()..color = Colors.white70);
       pauseBtn = Rect.fromLTWH(
-          size.width / 2 - widthFactor * 1.2,
-          size.height / 2 - heightFactor * 1.2,
+          longEdge() / 2 - widthFactor * 1.2,
+          shortEdge() / 2 - heightFactor * 1.2,
           widthFactor * 2.4,
           heightFactor * 2.4);
       canvas.drawRect(pauseBtn, Paint()..color = Color(0x00000000));
       pauseSprite.renderRect(canvas, pauseBtn.inflate(0));
-      pauseEngine();
-    }
-
-    if (player.health <= 0 || eggsMissed >= 10) {
-      Rect gameoverRect = Rect.fromLTWH(0, 0, size.width, size.height);
-      canvas.drawRect(gameoverRect, Paint()..color = Colors.black);
-      gameOver.renderRect(canvas, bg.inflate(0));
-      lost = true;
-      pauseEngine();
     }
   }
 
   @override
   void onPanUpdate(DragUpdateDetails details) {
+    if (pause) return;
     final delta = details.delta;
     final double pr = player.playerRect.right;
     final double pl = player.playerRect.left;
     double xMove = delta.dx;
-    if (pr + delta.dx >= size.width) {
-      xMove = size.width - pr;
+    if (pr + delta.dx >= longEdge()) {
+      xMove = longEdge() - pr;
     } else if (pl + delta.dx <= 0) {
       xMove = -pl;
     }
@@ -150,41 +147,58 @@ class ChickenGame extends Game with PanDetector, DoubleTapDetector {
       player.l = false;
     }
     if (delta.dy >= heightFactor) {
-      if (pause == false) {
-        pause = true;
-      } else {
-        pause = false;
-        resumeEngine();
-      }
+      pauseGame();
+    }
+  }
+
+  void pauseGame() {
+    if (pause == false) {
+      pause = true;
+    } else {
+      pause = false;
     }
   }
 
   @override
   void onDoubleTap() {
+    if (pause) {
+      pause = false;
+    }
     if (lost) {
-      player.health = 100;
-      eggsMissed = 0;
-      eggsCatched = 0;
-      eggs = [];
-      lost = false;
-      resumeEngine();
+      newGame();
       return;
     }
-    if (bullets.length != 5) {
+    shoot();
+  }
+
+  void shoot() {
+    if (bullets.length != 10) {
       bullets.add(Bullet(this, player.playerRect.center.dx));
     }
   }
 
+  void newGame() {
+    player.health = 100;
+    eggsMissed = 0;
+    eggsCatched = 0;
+    eggs = [];
+    lost = false;
+    score = Score(this, 10);
+    pause = false;
+  }
+
   @override
   void update(double t) {
-    eggsGenerator.update(t);
-    eggs.forEach((egg) => egg.update(t));
-    bullets.forEach((bullet) => bullet.update(t));
-    score.update(t);
+    if (!pause) {
+      eggsGenerator.update(t);
+      eggs.forEach((egg) => egg.update(t));
+      bullets.forEach((bullet) => bullet.update(t));
+      score.update(t);
+    }
   }
 
   void eggLayer() {
-    eggs.add(Egg(this, rand.nextDouble() * size.width));
+    eggs.add(Egg(this, rand.nextDouble() * longEdge()));
   }
 
   void eggCatch() {
@@ -243,5 +257,55 @@ class ChickenGame extends Game with PanDetector, DoubleTapDetector {
       }
     });
     eggs.removeWhere((egg) => toRemove.contains(egg));
+  }
+
+  @override
+  void onKeyEvent(RawKeyEvent event) {
+    if (lost) {
+      if (event.isShiftPressed) {
+        newGame();
+      }
+    }
+    if (event.data.keyLabel == " " ||
+        event.data.keyLabel == "ArrowUp" ||
+        event.data.keyLabel == "w") {
+      shoot();
+    }
+    if (event.data.keyLabel == "d" || event.data.keyLabel == "ArrowRight") {
+      double pr = player.playerRect.right;
+      double xMove = widthFactor / 8;
+      if (pr + xMove <= longEdge()) {
+        player.l = true;
+        player.playerRect = player.playerRect.translate(xMove, 0);
+      }
+    }
+    if (event.data.keyLabel == "a" || event.data.keyLabel == "ArrowLeft") {
+      double pl = player.playerRect.left;
+      double xMove = widthFactor / 8;
+      if (pl + xMove >= 0) {
+        player.l = false;
+        player.playerRect = player.playerRect.translate((-1) * xMove, 0);
+      }
+    }
+
+    if (event.isAltPressed) {
+      pauseGame();
+    }
+  }
+
+  ChickenGame(this.size);
+
+  double shortEdge() {
+    if (size.height > size.width) {
+      return size.width;
+    }
+    return size.height;
+  }
+
+  double longEdge() {
+    if (size.height > size.width) {
+      return size.height;
+    }
+    return size.width;
   }
 }

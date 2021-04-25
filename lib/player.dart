@@ -19,8 +19,8 @@ class Player {
     final width = chickenGame.widthFactor * 0.4;
     final height = chickenGame.heightFactor * 1.2;
     playerRect = Rect.fromLTWH(
-        chickenGame.size.width / 2 - width / 2,
-        chickenGame.size.height - (chickenGame.heightFactor * 2),
+        chickenGame.longEdge() / 2 - width / 2,
+        chickenGame.shortEdge() - (chickenGame.heightFactor * 2),
         width,
         height);
     health = 100;

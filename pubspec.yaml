@@ -68,7 +68,10 @@ flutter:
      - assets/images/fire.gif
      - assets/images/fire_start.png
      - assets/images/game-over.png
+     - assets/images/heart.png
      - assets/images/pause.png
+     - assets/images/score.png
+     - assets/images/health.png
      - assets/audio/crunch.mp3
      - assets/audio/lay.mp3
      - assets/audio/loop.mp3

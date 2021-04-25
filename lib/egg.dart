@@ -52,7 +52,7 @@ class Egg {
   void update(double t) {
     double stepDistance = speed * t;
     Offset toBootm =
-        Offset(eggRect.center.dx, chickenGame.size.height) - eggRect.center;
+        Offset(eggRect.center.dx, chickenGame.shortEdge()) - eggRect.center;
     if (stepDistance <= toBootm.distance) {
       Offset stepTpPlayer =
           Offset.fromDirection(toBootm.direction, stepDistance);
