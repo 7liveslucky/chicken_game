@@ -27,11 +27,14 @@ class Egg {
   int stoneIndex;
 
   Egg(this.chickenGame, double x) {
-    speed = chickenGame.widthFactor * randomNumberGenerator.nextDouble() * (1 - 0.3 + 1) + 0.1;
+    speed = chickenGame.widthFactor *
+            randomNumberGenerator.nextDouble() *
+            (1 - 0.6 + 1) +
+        0.1;
     stone = randomNumberGenerator.nextBool();
     eggRect = Rect.fromLTWH(
         x, 0, chickenGame.widthFactor * 0.3, chickenGame.heightFactor * 0.6);
-    stoneIndex=randomNumberGenerator.nextInt(3);
+    stoneIndex = randomNumberGenerator.nextInt(3);
   }
 
   void render(Canvas canvas) {

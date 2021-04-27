@@ -1,8 +1,8 @@
 import 'package:flame/sprite.dart';
-
-import 'main.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+
+import 'main.dart';
 
 class Score {
   final ChickenGame chickenGame;
@@ -11,7 +11,6 @@ class Score {
   Offset posPainterScore;
   Offset posPainterHealth;
   int eggsCatched;
-  int eggsMissed;
   int playerHealth;
   int maxLives;
   List<Rect> lives = [];
@@ -101,10 +100,6 @@ class Score {
             fontWeight: FontWeight.bold),
       );
       painterHealth.layout();
-    }
-    if (eggsMissed != chickenGame.eggsMissed) {
-      eggsMissed = chickenGame.eggsMissed;
-      lives.removeLast();
     }
   }
 }

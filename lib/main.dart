@@ -6,6 +6,7 @@ import 'package:dart_git_fetchbylanguage/egg.dart';
 import 'package:dart_git_fetchbylanguage/player.dart';
 import 'package:dart_git_fetchbylanguage/score.dart';
 import 'package:flame/flame.dart';
+import 'package:flame/flame_audio.dart';
 import 'package:flame/game.dart';
 import 'package:flame/gestures.dart';
 import 'package:flame/keyboard.dart';
@@ -20,8 +21,9 @@ import 'eggGenerator.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Flame.util.setLandscapeLeftOnly();
   await Flame.util.fullScreen();
+  await Flame.util.setOrientations(
+      [DeviceOrientation.landscapeRight, DeviceOrientation.landscapeLeft]);
   Size size = await Flame.util.initialDimensions();
   var game = new ChickenGame(size);
   game.init();
@@ -30,18 +32,19 @@ void main() async {
   panreg.onUpdate = game.onPanUpdate;
   DoubleTapGestureRecognizer dtreg = DoubleTapGestureRecognizer();
   dtreg.onDoubleTap = game.onDoubleTap;
+  // loadSounds();
 }
 
-// Future<void> loadSounds() async {
-//   Flame.audio.disableLog();
-//   await Flame.audio.loadAll([
-//     'stone_explode.mp3',
-//     'shoot.mp3',
-//     'loop.mp3',
-//     'lay.mp3',
-//     'crunch.mp3',
-//   ]);
-// }
+Future<void> loadSounds() async {
+  Flame.audio.disableLog();
+  await Flame.audio.loadAll([
+    'stone_explode.mp3',
+    'shoot.mp3',
+    'loop.mp3',
+    'lay.mp3',
+    'crunch.mp3',
+  ]);
+}
 
 class ChickenGame extends Game
     with PanDetector, DoubleTapDetector, KeyboardEvents {
@@ -58,7 +61,6 @@ class ChickenGame extends Game
   Rect bg;
   Rect pauseBtn;
   int eggsCatched;
-  int eggsMissed;
   Score score;
   Sprite groundSprite = Sprite('ground.png');
   Sprite bgSprite = Sprite('background.png');
@@ -77,11 +79,11 @@ class ChickenGame extends Game
     eggs = [];
     bullets = [];
     eggsGenerator = EggsGenerator(this);
-    eggsMissed = 0;
     eggsCatched = 0;
     score = Score(this, 10);
     pause = false;
     lost = false;
+    await FlameAudio().loopLongAudio('loop.mp3', volume: .4);
   }
 
   @override
@@ -110,11 +112,10 @@ class ChickenGame extends Game
     eggs.forEach((egg) => egg.render(canvas));
     score.render(canvas);
     bullets.forEach((bullet) => bullet.render(canvas));
-    if (player.health <= 0 || eggsMissed >= score.maxLives) {
+    if (lost) {
       Rect gameoverRect = Rect.fromLTWH(0, 0, longEdge(), shortEdge());
       canvas.drawRect(gameoverRect, Paint()..color = Colors.black);
       gameOver.renderRect(canvas, bg.inflate(0));
-      lost = true;
     }
     if (pause) {
       canvas.drawRect(Rect.largest, Paint()..color = Colors.white70);
@@ -171,15 +172,15 @@ class ChickenGame extends Game
     shoot();
   }
 
-  void shoot() {
+  Future<void> shoot() async {
     if (bullets.length != 10) {
       bullets.add(Bullet(this, player.playerRect.center.dx));
+      await FlameAudio().play('shoot.mp3');
     }
   }
 
   void newGame() {
     player.health = 100;
-    eggsMissed = 0;
     eggsCatched = 0;
     eggs = [];
     lost = false;
@@ -195,21 +196,35 @@ class ChickenGame extends Game
       bullets.forEach((bullet) => bullet.update(t));
       score.update(t);
     }
+    if (score.lives.length == 0) {
+      lost = true;
+    }
+
+    if (player.health <= 0) {
+      score.lives.removeLast();
+    }
   }
 
-  void eggLayer() {
-    eggs.add(Egg(this, rand.nextDouble() * longEdge()));
+  Future<void> eggLayer() async {
+    Egg egg = Egg(this, rand.nextDouble() * longEdge());
+    if (!egg.stone) await FlameAudio().play('lay.mp3', volume: .1);
+    eggs.add(egg);
   }
 
   void eggCatch() {
     var toRemove = [];
-    eggs.forEach((egg) {
+    eggs.forEach((egg) async {
       if (egg.eggRect.overlaps(player.playerRect)) {
         toRemove.add(egg);
         if (egg.stone && egg.stoneIndex < 2) {
           player.health -= 15;
         } else if (egg.stone) {
-          player.health += 10;
+          if (player.health + 40 > 100)
+            player.health = 100;
+          else {
+            player.health += 40;
+          }
+          await FlameAudio().play('crunch.mp3');
         } else {
           eggsCatched++;
         }
@@ -222,16 +237,17 @@ class ChickenGame extends Game
     var toRemoveEgg = [];
     var toRemoveBullets = [];
     bullets.forEach((bullet) {
-      eggs.forEach((egg) {
+      eggs.forEach((egg) async {
         if (bullet.bulletRect.overlaps(egg.eggRect)) {
           bullet.heat = true;
           toRemoveBullets.add(bullet);
           toRemoveEgg.add(egg);
 
           if (egg.stone) {
-            player.health += 2;
+            await FlameAudio().play('stone_explode.mp3');
+            player.health += 10;
           } else {
-            player.health -= 2;
+            player.health -= 15;
           }
         }
       });
@@ -252,7 +268,7 @@ class ChickenGame extends Game
       if (!egg.eggRect.overlaps(bg)) {
         toRemove.add(egg);
         if (!(egg.stone && egg.stoneIndex <= 2)) {
-          eggsMissed++;
+          player.health -= 10;
         }
       }
     });
